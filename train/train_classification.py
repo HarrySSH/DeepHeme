@@ -19,10 +19,8 @@ class trainer_classification(nn.Module):
         self.df = df
         names = list(set(self.df['Cell_Types'].tolist()))
         
-        self.train_image_files = train_image_files#[x  for x in train_image_files if (x.split('/')[-2] in names)]
-        self.validation_image_files = validation_image_files#[x  for x in validation_image_files if x.split('/')[-2] in names] 
-    
-        
+        self.train_image_files = train_image_files
+        self.validation_image_files = validation_image_files
         self.batch_size = batch_size
         self.epoch = epochs
         self.global_step = 0
@@ -35,7 +33,7 @@ class trainer_classification(nn.Module):
         self.img_transform = img_transform
         self.model = model
         self.save_checkpoints_dir = save_checkpoints_dir
-        #self.data_type = os.path.splitext(os.path.split(self.args.train_data_list)[-1])[0]
+
 
     def _dataloader(self, datalist, split='train',img_transform = False):
         dataset = Img_DataLoader(img_list=datalist, split=split, transform = img_transform, df = self.df)
@@ -57,9 +55,7 @@ class trainer_classification(nn.Module):
             mask_out = model(images)
 
             total_loss = nn.BCELoss()(mask_out, masks)
-            #elif self.args.segmentation_loss == "bce":
-            
-            
+
             optimizer.zero_grad()
             total_loss.backward()
             optimizer.step()
@@ -91,16 +87,10 @@ class trainer_classification(nn.Module):
                     predictions = torch.cat((predictions, mask_out), dim=0)
                     groundtruths = torch.cat((groundtruths, masks), dim=0)
 
-            indx = 0
             loss = torch.nn.BCELoss()
             total_loss = loss(predictions, groundtruths)
-            #predictions = predictions.data.cpu().numpy().flatten()
-            #groundtruths = groundtruths.data.cpu().numpy().flatten()
-
-            #best_threshold, best_f1, best_iou, _, _, _ = evaluate(predictions, groundtruths, interval=0.02)
 
 
-        #print("==> Epoch: %d Evaluation Threshold %.2f F1 %.4f." % (epoch+1, best_threshold, best_f1))
         print("==> Epoch: %d Loss %.6f ." % (epoch+1, total_loss.cpu().numpy() ))
         torch.cuda.empty_cache()
 
@@ -111,16 +101,9 @@ class trainer_classification(nn.Module):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model= nn.DataParallel(model)
         model.to(device)
-        #model = nn.DataParallel(model, device_ids=self.args.gpu_list)
-                #model = UNet()
 
         model.cuda()
         print("==> List learnable parameters")
-        '''
-        for name, param in model.named_parameters():
-            if param.requires_grad == True:
-                print("\t{}".format(name))
-        '''
 
         print("==> Load data.")
         print(len(self.train_image_files))
@@ -135,7 +118,7 @@ class trainer_classification(nn.Module):
 
         print("==> Start training")
         since = time.time()
-        best_f1 = 0.0
+
         loss_list = []
         
         print('==> Creat the saving dictionary')
@@ -152,11 +135,11 @@ class trainer_classification(nn.Module):
             
             torch.save({
             'epoch': epoch,
-            'model_state_dict': model.state_dict(),}, self.save_checkpoints_dir+'/checkpoint_'+str(epoch)+'_iteration3.ckpt')
+            'model_state_dict': model.state_dict(),}, self.save_checkpoints_dir+'/checkpoint_'+str(epoch)+'_iteration.ckpt')
             if _loss.detach().cpu().numpy()<= min(loss_list):
                 torch.save({
             'epoch': epoch,
-            'model_state_dict': model.state_dict(),}, self.save_checkpoints_dir+'/checkpoint_best_iteration3.ckpt')
+            'model_state_dict': model.state_dict(),}, self.save_checkpoints_dir+'/checkpoint_best.ckpt')
             lr_scheduler.step()
             
 

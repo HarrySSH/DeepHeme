@@ -31,6 +31,7 @@ import pandas as pd
 
 def one_vs_rest_metrics(y_true, y_pred, y_score):
     """
+    Adjusted from Iain
     Computes various one-vs-rest classification metrics.
 
     Parameters
@@ -76,6 +77,7 @@ def one_vs_rest_metrics(y_true, y_pred, y_score):
 
 def binary_clf_metrics(y_true, y_pred, y_score, pos_label=1):
     """
+    Adjusted from Iain
     Computes various binary classification metrics.
 
     Parameters

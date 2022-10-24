@@ -1,7 +1,9 @@
+# importing the libraries
+
 from __future__ import print_function
 
 import argparse
-# importing the libraries
+
 import os
 import sys
 import pandas as pd
@@ -33,14 +35,12 @@ import glob
 def main(args):
 
     img_dir = args.train_dir
-    # I only use the normal images
     image_files = glob.glob(img_dir + '*/*.png')
     labels = [x.split('/')[-2] for x in image_files]
 
-
+    # access all images
     X_train = glob.glob(os.path.join(args.train_dir,'*/*'))
     X_val = glob.glob(os.path.join(args.val_dir,'*/*'))
-
 
     labels = [x.split('/')[-2] for x in X_train]
     cell_types = set(labels)
@@ -54,11 +54,9 @@ def main(args):
 
 
 
-    enc = OneHotEncoder(handle_unknown='ignore')# passing bridge-types-cat column (label encoded values of bridge_types)
-    enc_df = pd.DataFrame(enc.fit_transform(cell_types_df[['Cell_Types_Cat']]).toarray())# merge with main df bridge_df on key values
+    enc = OneHotEncoder(handle_unknown='ignore')
+    enc_df = pd.DataFrame(enc.fit_transform(cell_types_df[['Cell_Types_Cat']]).toarray())
     cell_types_df = cell_types_df.join(enc_df)
-
-
 
     # load model
 
