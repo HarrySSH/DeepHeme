@@ -170,13 +170,15 @@ class SnapshotEnsemble(object):
 
                 _epoch_loss = self.train_one_epoch(i*epochs_per_cycle+j, train_data_loader, model, optimizer, lr)
                 _loss = self.val_one_epoch(val_data_loader, model, i*epochs_per_cycle+j)
-
+                loss_list.append(_loss.detach().cpu().numpy())
                 if _loss.detach().cpu().numpy()<= min(loss_list):
                     torch.save({'model_state_dict': model.state_dict(),}, self.save_checkpoints_dir+f'/checkpoint_se_{i}.ckpt') 
+                else:
+                    pass
             
 
             # retrieve the best model
-            model.load_state_dict(torch.load(self.save_checkpoints_dir+f'/checkpoint_se_{i}.ckpt')['model_state_dict'])
-            spapshots.append(model.state_dict())
-        return spapshots
+            #model.load_state_dict(torch.load(self.save_checkpoints_dir+f'/checkpoint_se_{i}.ckpt')['model_state_dict'])
+            #spapshots.append(model.state_dict())
+        return 'Done'
 
