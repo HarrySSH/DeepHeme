@@ -147,11 +147,10 @@ class SnapshotEnsemble(object):
         epochs_per_cycle = int(self.epoch / self.cycles)
 
         for i in range(self.cycles):
-
-
+            loss_list = []
             for j in range(epochs_per_cycle):
 
-                _lr_list, loss_list = []
+                
 
 
                 _epoch_loss = 0
