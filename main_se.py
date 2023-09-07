@@ -137,7 +137,7 @@ parser.add_argument('--lr_decay_every_x_epochs', type = int,
                     help='learning rate decay per X step')
 
 parser.add_argument('--save_checkpoints_dir', type = str,
-                    default=None,
+                    default='./se_checkpoints/',
                     help='save dir')
 
 args = parser.parse_args()
