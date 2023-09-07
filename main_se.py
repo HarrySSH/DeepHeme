@@ -38,11 +38,20 @@ def main(args):
     image_files = glob.glob(img_dir + '*/*.png')
     labels = [x.split('/')[-2] for x in image_files]
 
+    
+
     # access all images
     X_train = glob.glob(os.path.join(args.train_dir,'*/*'))
     X_val = glob.glob(os.path.join(args.val_dir,'*/*'))
 
+    
+
+    # remove everything image with labep 'PL4'
+    X_train = [x for x in X_train if 'PL4' not in x]
+    X_val = [x for x in X_val if 'PL4' not in x]
+
     labels = [x.split('/')[-2] for x in X_train]
+
     cell_types = set(labels)
 
     cell_types = list(cell_types)
@@ -69,7 +78,8 @@ def main(args):
 
     transform_pipeline = albumentations.Compose(
         [
-            albumentations.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+            albumentations.Normalize(mean=(0.5642, 0.5026, 0.6960), std=(0.2724,
+ 0.2838, 0.2167)),
 
         ]
     )
