@@ -115,7 +115,7 @@ parser.add_argument('--gamma', type=float,
                     help='gamma')
 
 parser.add_argument('--epochs', type=float,
-                    default=30,
+                    default=100,
                     help='epoch number')
 
 parser.add_argument('--batch_size', type=int,
