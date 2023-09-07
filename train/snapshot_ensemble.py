@@ -11,7 +11,7 @@ sys.path.append("..")
 from torch.utils.data import DataLoader
 from Datasets.DataLoader import Img_DataLoader
 from utils.utils import configure_optimizers
-
+import random
 
 import torch
 import torch.nn as nn
@@ -64,6 +64,8 @@ class SnapshotEnsemble(object):
     def train_one_epoch(self, epoch, train_loader, model, optimizer, lr):
         t0 = 0.0
         model.train()
+        # sampling the train_loader to 10% of the data
+
         for inputs in train_loader:
             
             self.global_step += 1
@@ -129,8 +131,7 @@ class SnapshotEnsemble(object):
         print(len(self.train_image_files))
         print(len(self.validation_image_files))
 
-        train_data_loader = self._dataloader(self.train_image_files, split='train', img_transform=self.img_transform)
-        val_data_loader = self._dataloader(self.validation_image_files, split='val', img_transform=self.img_transform)
+
 
         print("==> Configure optimizer.")
         optimizer, _ = configure_optimizers(model, self.init_lr, self.weight_decay,
@@ -149,6 +150,13 @@ class SnapshotEnsemble(object):
         for i in range(self.cycles):
             loss_list = []
             for j in range(epochs_per_cycle):
+
+                ### sample the list to 10% of the data
+                train_image_files = random.sample(self.train_image_files, int(len(self.train_image_files)*0.1))
+                
+
+                train_data_loader = self._dataloader(train_image_files, split='train', img_transform=self.img_transform)
+                val_data_loader = self._dataloader(self.validation_image_files, split='val', img_transform=self.img_transform)
 
                 
 

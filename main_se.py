@@ -52,6 +52,8 @@ def main(args):
 
     labels = [x.split('/')[-2] for x in X_train]
 
+    
+
     cell_types = set(labels)
 
     cell_types = list(cell_types)
@@ -129,7 +131,7 @@ parser.add_argument('--epochs', type=float,
                     help='epoch number')
 
 parser.add_argument('--batch_size', type=int,
-                    default=1024,
+                    default=256,
                     help='epoch number')
 
 parser.add_argument('--lr_decay_every_x_epochs', type = int,
