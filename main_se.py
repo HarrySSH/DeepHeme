@@ -131,7 +131,7 @@ parser.add_argument('--epochs', type=float,
                     help='epoch number')
 
 parser.add_argument('--batch_size', type=int,
-                    default=256,
+                    default=1024,
                     help='epoch number')
 
 parser.add_argument('--lr_decay_every_x_epochs', type = int,

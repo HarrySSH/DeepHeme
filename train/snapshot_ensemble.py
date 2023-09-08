@@ -131,6 +131,9 @@ class SnapshotEnsemble(object):
         print(len(self.train_image_files))
         print(len(self.validation_image_files))
 
+        train_data_loader = self._dataloader(self.train_image_files, split='train', img_transform=self.img_transform)
+        val_data_loader = self._dataloader(self.validation_image_files, split='val', img_transform=self.img_transform)
+
 
 
         print("==> Configure optimizer.")
@@ -152,11 +155,10 @@ class SnapshotEnsemble(object):
             for j in range(epochs_per_cycle):
 
                 ### sample the list to 10% of the data
-                train_image_files = random.sample(self.train_image_files, int(len(self.train_image_files)*0.1))
+                
                 
 
-                train_data_loader = self._dataloader(train_image_files, split='train', img_transform=self.img_transform)
-                val_data_loader = self._dataloader(self.validation_image_files, split='val', img_transform=self.img_transform)
+                
 
                 
 
