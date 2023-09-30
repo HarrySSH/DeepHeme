@@ -20,6 +20,8 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.autograd import Variable
 
+from tqdm import tqdm
+
 
 import numpy as np
 
@@ -66,7 +68,10 @@ class SnapshotEnsemble(object):
         model.train()
         # sampling the train_loader to 10% of the data
 
-        for inputs in train_loader:
+        # show the progress bar
+
+
+        for inputs in tqdm(train_loader):
             
             self.global_step += 1
             self.current_step +=1
@@ -151,17 +156,12 @@ class SnapshotEnsemble(object):
         epochs_per_cycle = int(self.epoch / self.cycles)
 
         for i in range(self.cycles):
+            ### 
             loss_list = []
             for j in range(epochs_per_cycle):
 
                 ### sample the list to 10% of the data
                 
-                
-
-                
-
-                
-
 
                 _epoch_loss = 0
 

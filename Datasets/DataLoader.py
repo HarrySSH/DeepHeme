@@ -58,3 +58,14 @@ class Img_DataLoader(data.Dataset):
         sample["image"] = torch.from_numpy(img).float()  # self.encoder(torch.from_numpy(img).float())
         sample["ID"] = img_path
         return sample
+    
+
+### you have a pandas dataframe, row is cell ID and colmnas is cell types, the contain is probability of each cell type
+### convert it to the predicted class, convert the dataframe to only have 1 and 0
+def convert_df_to_class(df):
+    df = df.copy()
+    df = df.drop(['Cell_Types'], axis=1)
+    df = df.apply(lambda x: x == x.max(), axis=1)
+    df = df.astype(int)
+    return df
+
