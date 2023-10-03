@@ -45,9 +45,11 @@ class trainer_classification(nn.Module):
         return dataloader
 
     def train_one_epoch(self, epoch, train_loader, model, optimizer, lr_scheduler):
+        from tqdm import tqdm
         t0 = 0.0
+
         model.train()
-        for inputs in train_loader:
+        for inputs in tqdm(train_loader):
             
             self.global_step += 1
             self.current_step +=1
