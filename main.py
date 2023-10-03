@@ -71,6 +71,14 @@ def main(args):
         ]
     )
 
+    train_transform_pipeline = albumentations.Compose(
+        [
+            albumentations.Normalize(mean=(0.5642, 0.5026, 0.6960), std=(0.2724,
+ 0.2838, 0.2167)),
+
+        ]
+    )
+    '''
     train_transform_pipeline = albumentations.Compose([
     albumentations.ShiftScaleRotate(p = 0.8),
     albumentations.HorizontalFlip(p=0.5),
@@ -82,6 +90,7 @@ def main(args):
     albumentations.ColorJitter(p = 0.2),
     albumentations.RandomGamma(p = 0.2),
 ])
+    '''
 
     trainer = trainer_classification(train_image_files=X_train, validation_image_files=X_val, model=my_extended_model,
                                         train_img_transform=train_transform_pipeline,
