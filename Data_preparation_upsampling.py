@@ -9,7 +9,7 @@ img_root_dir = '/data/aa-ssun2-cmp/hemepath_dataset_FINAL/metadata'
 if not os.path.exists(img_root_dir):
     os.makedirs(img_root_dir)
 img_root_dir_1 = '/data/aa-ssun2-cmp/hemepath_dataset_FINAL/UCSF_repo'
-img_root_dir_2 = '/data/aa-ssun2-cmp/hemepath_dataset_FINAL/MSK_repo'
+img_root_dir_2 = '/data/aa-ssun2-cmp/hemepath_dataset_FINAL/MSK_repok'
 #based on the img_root_dir, the data_info csv file will be saved to the same directory as the img_root_dir
 
 # first create the data_info csv file with fpath and label columns
