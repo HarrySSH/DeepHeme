@@ -59,7 +59,7 @@ def main(args):
     torch.hub._validate_not_a_forked_repo = lambda a, b, c: True  # Interesting! This worked for no reason haha
     if args.input_model == 'ResNeXt50':
         resnext50_pretrained = torch.hub.load('pytorch/vision:v0.10.0', 'resnext50_32x4d', pretrained=args.pretrained)
-        my_extended_model = Myresnext50(my_pretrained_model= resnext50_pretrained, num_classes = 23)
+        my_extended_model = Myresnext50(my_pretrained_model= resnext50_pretrained, num_classes = len(cell_types))
 
     ## Simple augumentation to improtve the data generalibility
 
