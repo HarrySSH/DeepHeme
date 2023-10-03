@@ -54,7 +54,7 @@ class trainer_classification(nn.Module):
 
             t1 = time.time()
 
-            images, masks = inputs["image"].cuda(), inputs["mask"].cuda()
+            images, masks = inputs["image"].cuda(), inputs["label"].cuda()
             mask_out = model(images)
 
             total_loss = nn.BCELoss()(mask_out, masks)
@@ -80,7 +80,7 @@ class trainer_classification(nn.Module):
             model.eval()
 
             for i, inputs in enumerate(data_loader):
-                images, masks = inputs["image"].cuda(), inputs["mask"].cuda()
+                images, masks = inputs["image"].cuda(), inputs["label"].cuda()
                 mask_out = model(images)
                 
                 if i == 0:
