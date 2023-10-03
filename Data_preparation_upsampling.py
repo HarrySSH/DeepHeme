@@ -43,7 +43,7 @@ max_num_imgs_per_class = max(counter.values())
 balanced_image_dirs = []
 balanced_labels     = []    
 for label in counter.keys():
-    img_dirs = glob.glob(os.path.join(img_root_dir_1, label, '*.png')) + glob.glob(os.path.join(img_root_dir_2, label, '*.png'))
+    img_dirs = data_info_train[data_info_train['label']==label]['fpath'].values.tolist()
     if len(img_dirs) < max_num_imgs_per_class:
         # how many more we need to add
         num_more = max_num_imgs_per_class - len(img_dirs)
