@@ -24,7 +24,7 @@ class trainer_classification(nn.Module):
         self.train_image_files = train_image_files
         self.validation_image_files = validation_image_files
         self.batch_size = batch_size
-        self.epoch = epochs
+        self.epoch = int(epochs)
         self.global_step = 0
         self.current_step = 0
         self.init_lr = init_lr
