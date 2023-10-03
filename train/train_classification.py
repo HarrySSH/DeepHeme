@@ -11,11 +11,13 @@ from utils.utils import configure_optimizers
 class trainer_classification(nn.Module):
     def __init__(self, train_image_files, validation_image_files, gamma = 0.1,
                                init_lr = 0.001, weight_decay = 0.0005, batch_size = 32, epochs = 30, lr_decay_every_x_epochs = 10,
-                 print_steps = 50, df = None, img_transform = False, model =False,
+                 print_steps = 50, df = None, 
+                 train_img_transform = False, val_img_transform = False,
+                 model =False,
                 save_checkpoints_dir = None):
         super(trainer_classification, self).__init__()
         assert model != False, 'Please put a model!'
-        assert img_transform != False, 'Please put a augumentation pipeline!'
+        assert train_img_transform != False, 'Please put a augumentation pipeline!'
         self.df = df
         names = list(set(self.df['Cell_Types'].tolist()))
         
@@ -30,7 +32,8 @@ class trainer_classification(nn.Module):
         self.weight_decay = weight_decay
         self.gamma = gamma
         self.print_steps = print_steps
-        self.img_transform = img_transform
+        self.train_image_transform = train_img_transform
+        self.val_image_transform = val_img_transform
         self.model = model
         self.save_checkpoints_dir = save_checkpoints_dir
 
@@ -109,8 +112,8 @@ class trainer_classification(nn.Module):
         print(len(self.train_image_files))
         print(len(self.validation_image_files))
 
-        train_data_loader = self._dataloader(self.train_image_files, split='train', img_transform=self.img_transform)
-        val_data_loader = self._dataloader(self.validation_image_files, split='val', img_transform=self.img_transform)
+        train_data_loader = self._dataloader(self.train_image_files, split='train', img_transform=self.train_image_transform)
+        val_data_loader = self._dataloader(self.validation_image_files, split='val', img_transform=self.val_image_transform)
 
         print("==> Configure optimizer.")
         optimizer, lr_scheduler = configure_optimizers(model, self.init_lr, self.weight_decay,

@@ -34,13 +34,9 @@ import glob
 
 def main(args):
 
-    img_dir = args.train_dir
-    image_files = glob.glob(img_dir + '*/*.png')
-    labels = [x.split('/')[-2] for x in image_files]
-
-    # access all images
-    X_train = glob.glob(os.path.join(args.train_dir,'*/*'))
-    X_val = glob.glob(os.path.join(args.val_dir,'*/*'))
+    meta_data = pd.read_csv(args.meta_data)
+    X_train = meta_data[meta_data['split']=='train']['fpath'].tolist()
+    X_val = meta_data[meta_data['split']=='val']['fpath'].tolist()
 
     labels = [x.split('/')[-2] for x in X_train]
     cell_types = set(labels)
@@ -67,15 +63,29 @@ def main(args):
 
     ## Simple augumentation to improtve the data generalibility
 
-    transform_pipeline = albumentations.Compose(
+    val_transform_pipeline = albumentations.Compose(
         [
-            albumentations.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+            albumentations.Normalize(mean=(0.5642, 0.5026, 0.6960), std=(0.2724,
+ 0.2838, 0.2167)),
 
         ]
     )
 
+    train_transform_pipeline = albumentations.Compose([
+    albumentations.ShiftScaleRotate(p = 0.8),
+    albumentations.HorizontalFlip(p=0.5),
+    albumentations.VerticalFlip(p=0.5),
+    albumentations.Affine(shear=(-10,10), p = 0.3),
+    albumentations.ISONoise(color_shift=(0.01, 0.02), intensity=(0.05, 0.01), always_apply=False, p=0.2),
+    albumentations.RandomBrightnessContrast(contrast_limit=0.4, brightness_by_max=0.4, p=0.5),
+    albumentations.CLAHE(p = 0.3),
+    albumentations.ColorJitter(p = 0.2),
+    albumentations.RandomGamma(p = 0.2),
+])
+
     trainer = trainer_classification(train_image_files=X_train, validation_image_files=X_val, model=my_extended_model,
-                                     img_transform=transform_pipeline, init_lr=args.init_lr,
+                                        train_img_transform=train_transform_pipeline,
+                                     val_img_transform=val_transform_pipeline, init_lr=args.init_lr,
                                      lr_decay_every_x_epochs=args.lr_decay_every_x_epochs,
 
                                      weight_decay=args.weight_decay, batch_size=args.batch_size, epochs=args.epochs, gamma=args.gamma, df=cell_types_df,
@@ -86,13 +96,9 @@ def main(args):
 
 # Training settings
 parser = argparse.ArgumentParser(description='Configurations for Model training')
-parser.add_argument('--train_dir', type=str,
-                    default='../../2022_05_18_cells_50_NORMAL/Cross_Validation/iteration_3/train/',
-                    help='train data directory')
-
-parser.add_argument('--val_dir', type=str,
-                    default='../../2022_05_18_cells_50_NORMAL/Cross_Validation/iteration_3/val/',
-                    help='train data directory')
+parser.add_argument('--meta_data', type=str,
+                    default='/data/aa-ssun2-cmp/hemepath_dataset_FINAL/metadata/data_info.csv',)
+                    
 
 parser.add_argument('--input_model', type=str,
                     default='ResNeXt50',
