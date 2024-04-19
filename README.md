@@ -42,3 +42,16 @@ Depending on your dataset you might have to do something slightly different, for
 
 There are two version of the training, regular training and snapshot ensemble. 
 
+Making sure that the two model using the same CNN Architecture.
+
+For regular training process:
+```
+python main.py
+```
+For sanpshot ensemble process:
+```
+python main_se.py
+```
+
+
+
