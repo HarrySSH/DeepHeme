@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 
-class Myresnext50(nn.Module):
+class CNNModels(nn.Module):
     def __init__(self, my_pretrained_model, num_classes = 19):
-        super(Myresnext50, self).__init__()
+        super(CNNModels, self).__init__()
         self.pretrained = my_pretrained_model
         self.my_new_layers = nn.Sequential(nn.Linear(1000, 100),
                                            nn.ReLU(),
@@ -16,4 +16,5 @@ class Myresnext50(nn.Module):
         
         pred = torch.sigmoid(x.reshape(x.shape[0], 1,self.num_classes))
         return pred
+
 

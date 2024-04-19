@@ -38,7 +38,7 @@ python Data_preparation.py
 Depending on your dataset you might have to do something slightly different, for example, if you want split at the patch level or slide level you might want to seperate the train, val and test in a different way.
 
 
+#### Run training
 
-#### Run training or tuning
-
+There are two version of the training, regular training and snapshot ensemble. 
 
