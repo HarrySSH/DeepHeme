@@ -5,15 +5,14 @@ import pandas as pd
 import random
 # Make a data info csv file that includes the image paths, labels, and 
 # train/val/test splits. This csv file should have three columns: ['fpath', 'label', 'split'].
-img_root_dir = '/data/aa-ssun2-cmp/hemepath_dataset_FINAL/metadata'
-if not os.path.exists(img_root_dir):
-    os.makedirs(img_root_dir)
-img_root_dir_1 = '/data/aa-ssun2-cmp/hemepath_dataset_FINAL/UCSF_repo'
-img_root_dir_2 = '/data/aa-ssun2-cmp/hemepath_dataset_FINAL/MSK_repo'
+metadata_dir = './metadata/'
+if not os.path.exists(metadata_dir):
+    os.makedirs(metadata_dir)
+img_root_dir = ''
 #based on the img_root_dir, the data_info csv file will be saved to the same directory as the img_root_dir
 
 # first create the data_info csv file with fpath and label columns
-image_dirs = glob.glob(os.path.join(img_root_dir_1, '*', '*.png')) + glob.glob(os.path.join(img_root_dir_2, '*', '*.png'))
+image_dirs = glob.glob(os.path.join(img_root_dir, '*', '*.png')) 
 labels     = [x.split('/')[-2] for x in image_dirs]
 
 ### balance the dataset
@@ -28,7 +27,7 @@ max_num_imgs_per_class = max(counter.values())
 balanced_image_dirs = []
 balanced_labels     = []    
 for label in counter.keys():
-    img_dirs = glob.glob(os.path.join(img_root_dir_1, label, '*.png')) + glob.glob(os.path.join(img_root_dir_2, label, '*.png'))
+    img_dirs = glob.glob(os.path.join(img_root_dir, label, '*.png')) 
     if len(img_dirs) < max_num_imgs_per_class:
         # how many more we need to add
         num_more = max_num_imgs_per_class - len(img_dirs)
@@ -77,6 +76,6 @@ data_info.loc[data_info.groupby('label').sample(frac=0.2).index, 'split'] = 'tes
 ### split 20% of the 'train' data into the validation set, proportionally to the original class distribution
 data_info.loc[data_info[data_info['split']=='train'].groupby('label').sample(frac=0.2).index, 'split'] = 'val'
 ### save the data_info csv file
-data_info.to_csv(os.path.join(img_root_dir, 'data_info.csv'), index=False)
+data_info.to_csv(os.path.join(metadata_dir, 'data_info.csv'), index=False)
 
-data_info_fpath = os.path.join(img_root_dir, 'data_info.csv')
+data_info_fpath = os.path.join(metadata_dir, 'data_info.csv')
