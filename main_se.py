@@ -8,12 +8,7 @@ import os
 import sys
 import pandas as pd
 import torch
-from torch.utils import data
-from torchvision import transforms
-from PIL import Image
-import cv2
-import  glob
-import time
+
 import albumentations
 import pandas as pd
 import numpy as np
@@ -22,15 +17,9 @@ from sklearn.preprocessing import OneHotEncoder# creating instance of one-hot-en
 ### Internal Imports
 from models.CNN_models import CNNModels
 from train.snapshot_ensemble import SnapshotEnsemble
-from utils.utils import configure_optimizers
-from Datasets.DataLoader import Img_DataLoader
 
 ### PyTorch Imports
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.utils.data import DataLoader
-import glob
 
 def main(args):
 
@@ -61,28 +50,28 @@ def main(args):
     torch.hub._validate_not_a_forked_repo = lambda a, b, c: True  # Interesting! This worked for no reason haha
     if args.input_model == 'ResNeXt50':
         resnext50_pretrained = torch.hub.load('pytorch/vision:v0.10.0', 'resnext50_32x4d', pretrained=args.pretrained)
-        my_extended_model = CNNModels(my_pretrained_model= resnext50_pretrained, num_classes = len(cell_types))
+        my_extended_model = CNNModels(pretrained_model= resnext50_pretrained, num_classes = len(cell_types))
     elif args.input_model == "GoogleNet":
         googlenet_pretrained = torch.hub.load('pytorch/vision:v0.10.0', 'googlenet', pretrained=args.pretrained)
-        my_extended_model = CNNModels(my_pretrained_model= googlenet_pretrained, num_classes = len(cell_types))
+        my_extended_model = CNNModels(pretrained_model= googlenet_pretrained, num_classes = len(cell_types))
     elif args.input_model == "Inception_v3":
         inception_v3_pretrained = torch.hub.load('pytorch/vision:v0.10.0', 'inception_v3', pretrained=args.pretrained)
-        my_extended_model = CNNModels(my_pretrained_model= inception_v3_pretrained, num_classes = len(cell_types))
+        my_extended_model = CNNModels(pretrained_model= inception_v3_pretrained, num_classes = len(cell_types))
     elif args.input_model == "vgg19":
         vgg19_pretrained = torch.hub.load('pytorch/vision:v0.10.0', 'vgg19', pretrained=args.pretrained)
-        my_extended_model = CNNModels(my_pretrained_model= vgg19_pretrained, num_classes = len(cell_types))
+        my_extended_model = CNNModels(pretrained_model= vgg19_pretrained, num_classes = len(cell_types))
     elif args.input_model == "efficientnet_v2":
         efficientnet_v2_pretrained = torch.hub.load('rwightman/gen-efficientnet-pytorch', 'efficientnet_v2_rw_m', pretrained=args.pretrained)
-        my_extended_model = CNNModels(my_pretrained_model= efficientnet_v2_pretrained, num_classes = len(cell_types))
+        my_extended_model = CNNModels(pretrained_model= efficientnet_v2_pretrained, num_classes = len(cell_types))
     elif args.input_model == "resnet50":
         resnet50_pretrained = torch.hub.load('pytorch/vision:v0.10.0', 'resnet50', pretrained=args.pretrained)
-        my_extended_model = CNNModels(my_pretrained_model= resnet50_pretrained, num_classes = len(cell_types))
+        my_extended_model = CNNModels(pretrained_model= resnet50_pretrained, num_classes = len(cell_types))
     elif args.input_model == "resnet101":
         resnet101_pretrained = torch.hub.load('pytorch/vision:v0.10.0', 'resnet101', pretrained=args.pretrained)
-        my_extended_model = CNNModels(my_pretrained_model= resnet101_pretrained, num_classes = len(cell_types))
+        my_extended_model = CNNModels(pretrained_model= resnet101_pretrained, num_classes = len(cell_types))
     elif args.input_model == "alexnet":
         alexnet_pretrained = torch.hub.load('pytorch/vision:v0.10.0', 'alexnet', pretrained=args.pretrained)
-        my_extended_model = CNNModels(my_pretrained_model= alexnet_pretrained, num_classes = len(cell_types))
+        my_extended_model = CNNModels(pretrained_model= alexnet_pretrained, num_classes = len(cell_types))
     else:
         print(f'Please provide a valid model name, the model name shall be in the list of the following models: ResNeXt50, GoogleNet, Inception_v3, vgg19, efficientnet_v2, resnet50, resnet101, alexnet')
         sys.exit(1)
