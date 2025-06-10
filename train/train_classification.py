@@ -1,30 +1,84 @@
-import torch
-import torch.nn as nn
+"""
+Training module for snapshot ensemble model training.
+"""
+
+import os
 import sys
 import time
-import cv2
-import os
-sys.path.append("..")
+from math import pi, cos
+from typing import Optional, Tuple, List
+
+import torch
+import torch.nn as nn
 from torch.utils.data import DataLoader
+from tqdm import tqdm
+
 from Datasets.DataLoader import Img_DataLoader
 from utils.utils import configure_optimizers
-class trainer_classification(nn.Module):
-    def __init__(self, train_image_files, validation_image_files, gamma = 0.1,
-                               init_lr = 0.001, weight_decay = 0.0005, batch_size = 32, epochs = 30, lr_decay_every_x_epochs = 10,
-                 print_steps = 50, df = None, 
-                 train_img_transform = False, val_img_transform = False,
-                 model =False,
-                save_checkpoints_dir = None):
-        super(trainer_classification, self).__init__()
-        assert model != False, 'Please put a model!'
-        assert train_img_transform != False, 'Please put a augumentation pipeline!'
-        self.df = df
-        names = list(set(self.df['Cell_Types'].tolist()))
+
+def cosine_learning_rate(initial_lr: float,
+                        iteration: int,
+                        epoch_per_cycle: int) -> float:
+    """
+    Compute learning rate using cosine annealing.
+    
+    Args:
+        initial_lr: Initial learning rate
+        iteration: Current iteration
+        epoch_per_cycle: Number of epochs per cycle
         
+    Returns:
+        float: Current learning rate
+    """
+    return initial_lr * (cos(pi * iteration / epoch_per_cycle) + 1) / 2
+
+class SnapshotEnsembleTrainer:
+    """
+    Trainer class for snapshot ensemble model training.
+    """
+    
+    def __init__(self,
+                 train_image_files: List[str],
+                 validation_image_files: List[str],
+                 model: nn.Module,
+                 img_transform: object,
+                 df: pd.DataFrame,
+                 init_lr: float = 0.001,
+                 weight_decay: float = 0.0005,
+                 batch_size: int = 32,
+                 epochs: int = 30,
+                 lr_decay_every_x_epochs: int = 10,
+                 gamma: float = 0.1,
+                 print_steps: int = 50,
+                 save_checkpoints_dir: Optional[str] = None,
+                 cycles: int = 5):
+        """
+        Initialize the trainer.
+        
+        Args:
+            train_image_files: List of training image paths
+            validation_image_files: List of validation image paths
+            model: PyTorch model to train
+            img_transform: Data augmentation pipeline
+            df: DataFrame containing cell type information
+            init_lr: Initial learning rate
+            weight_decay: Weight decay for regularization
+            batch_size: Batch size for training
+            epochs: Number of training epochs
+            lr_decay_every_x_epochs: Learning rate decay interval
+            gamma: Learning rate decay factor
+            print_steps: Steps between progress prints
+            save_checkpoints_dir: Directory to save model checkpoints
+            cycles: Number of snapshot cycles
+        """
+        if not model or not img_transform:
+            raise ValueError("Model and transforms are required")
+            
+        self.df = df
         self.train_image_files = train_image_files
         self.validation_image_files = validation_image_files
         self.batch_size = batch_size
-        self.epoch = int(epochs)
+        self.epochs = epochs
         self.global_step = 0
         self.current_step = 0
         self.init_lr = init_lr
@@ -32,122 +86,208 @@ class trainer_classification(nn.Module):
         self.weight_decay = weight_decay
         self.gamma = gamma
         self.print_steps = print_steps
-        self.train_image_transform = train_img_transform
-        self.val_image_transform = val_img_transform
+        self.img_transform = img_transform
         self.model = model
         self.save_checkpoints_dir = save_checkpoints_dir
+        self.cycles = cycles
+        
+        if save_checkpoints_dir:
+            os.makedirs(save_checkpoints_dir, exist_ok=True)
 
+    def _create_dataloader(self,
+                          data_list: List[str],
+                          split: str = 'train',
+                          img_transform: Optional[object] = None) -> DataLoader:
+        """
+        Create a DataLoader for the given data.
+        
+        Args:
+            data_list: List of image paths
+            split: Dataset split ('train' or 'val')
+            img_transform: Data augmentation pipeline
+            
+        Returns:
+            DataLoader: PyTorch DataLoader
+        """
+        dataset = Img_DataLoader(
+            img_list=data_list,
+            split=split,
+            transform=img_transform,
+            df=self.df
+        )
+        shuffle = split == 'train'
+        return DataLoader(
+            dataset,
+            batch_size=self.batch_size,
+            num_workers=2,
+            shuffle=shuffle
+        )
 
-    def _dataloader(self, datalist, split='train',img_transform = False):
-        dataset = Img_DataLoader(img_list=datalist, split=split, transform = img_transform, df = self.df)
-        shuffle = True if split == 'train' else False
-        dataloader = DataLoader(dataset, batch_size=self.batch_size, num_workers=2, shuffle=shuffle)
-        return dataloader
-
-    def train_one_epoch(self, epoch, train_loader, model, optimizer, lr_scheduler):
-        from tqdm import tqdm
-        t0 = 0.0
-
+    def train_one_epoch(self,
+                       epoch: int,
+                       train_loader: DataLoader,
+                       model: nn.Module,
+                       optimizer: torch.optim.Optimizer,
+                       lr: float) -> float:
+        """
+        Train for one epoch.
+        
+        Args:
+            epoch: Current epoch number
+            train_loader: Training data loader
+            model: Model to train
+            optimizer: Optimizer
+            lr: Current learning rate
+            
+        Returns:
+            float: Average loss for the epoch
+        """
         model.train()
-        for inputs in tqdm(train_loader):
-            
+        epoch_loss = 0.0
+        batch_time = 0.0
+        
+        for inputs in tqdm(train_loader, desc=f"Epoch {epoch + 1}"):
             self.global_step += 1
-            self.current_step +=1
-
-            t1 = time.time()
-
-            images, masks = inputs["image"].cuda(), inputs["label"].cuda()
-            mask_out = model(images)
-
-            total_loss = nn.BCELoss()(mask_out, masks)
-
+            self.current_step += 1
+            
+            start_time = time.time()
+            
+            # Forward pass
+            images = inputs["image"].cuda()
+            targets = inputs["label"].cuda()
+            outputs = model(images)
+            
+            # Compute loss
+            loss = nn.BCELoss()(outputs, targets)
+            
+            # Backward pass
             optimizer.zero_grad()
-            total_loss.backward()
+            loss.backward()
             optimizer.step()
-            t0 += (time.time() - t1)
-
+            
+            # Update metrics
+            batch_time += time.time() - start_time
+            epoch_loss += loss.item()
+            
+            # Print progress
             if self.global_step % self.print_steps == 0:
-                message = "Epoch: %d Step: %d LR: %.6f Total Loss: %.4f Runtime: %.2f s/%d iters." % (epoch+1, self.global_step, lr_scheduler.get_last_lr()[-1], total_loss, t0, self.current_step)
-                print("==> %s" % (message))
+                avg_loss = epoch_loss / self.current_step
+                avg_time = batch_time / self.current_step
+                print(f"Epoch: {epoch + 1} Step: {self.global_step} "
+                      f"LR: {lr:.6f} "
+                      f"Loss: {avg_loss:.4f} "
+                      f"Time: {avg_time:.2f}s/iter")
                 self.current_step = 0
-                t0 = 0.0
+                batch_time = 0.0
+        
+        return epoch_loss / len(train_loader)
 
-        return total_loss
-
-
-
-
-    def val_one_epoch(self, data_loader, model, epoch):
+    def validate(self,
+                data_loader: DataLoader,
+                model: nn.Module,
+                epoch: int) -> float:
+        """
+        Validate the model.
+        
+        Args:
+            data_loader: Validation data loader
+            model: Model to validate
+            epoch: Current epoch number
+            
+        Returns:
+            float: Validation loss
+        """
+        model.eval()
+        all_predictions = []
+        all_targets = []
+        
         with torch.no_grad():
-            model.eval()
-
-            for i, inputs in enumerate(data_loader):
-                images, masks = inputs["image"].cuda(), inputs["label"].cuda()
-                mask_out = model(images)
+            for inputs in data_loader:
+                images = inputs["image"].cuda()
+                targets = inputs["label"].cuda()
+                outputs = model(images)
                 
-                if i == 0:
-                    predictions = mask_out
-                    groundtruths = masks
-                else:
-                    predictions = torch.cat((predictions, mask_out), dim=0)
-                    groundtruths = torch.cat((groundtruths, masks), dim=0)
-
-            loss = torch.nn.BCELoss()
-            total_loss = loss(predictions, groundtruths)
-
-
-        print("==> Epoch: %d Loss %.6f ." % (epoch+1, total_loss.cpu().numpy() ))
+                all_predictions.append(outputs)
+                all_targets.append(targets)
+        
+        # Concatenate all predictions and targets
+        predictions = torch.cat(all_predictions, dim=0)
+        targets = torch.cat(all_targets, dim=0)
+        
+        # Compute loss
+        loss = nn.BCELoss()(predictions, targets)
+        print(f"Epoch: {epoch + 1} Validation Loss: {loss.item():.6f}")
+        
         torch.cuda.empty_cache()
+        return loss.item()
 
-        return total_loss
-
-    def train(self,model):
-        print("==> Create model.")
+    def train(self, model: nn.Module) -> str:
+        """
+        Train the model using snapshot ensemble.
+        
+        Args:
+            model: Model to train
+            
+        Returns:
+            str: Status message
+        """
+        # Setup
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        model= nn.DataParallel(model)
-        model.to(device)
-
-        model.cuda()
-        print("==> List learnable parameters")
-
-        print("==> Load data.")
-        print(len(self.train_image_files))
-        print(len(self.validation_image_files))
-
-        train_data_loader = self._dataloader(self.train_image_files, split='train', img_transform=self.train_image_transform)
-        val_data_loader = self._dataloader(self.validation_image_files, split='val', img_transform=self.val_image_transform)
-
-        print("==> Configure optimizer.")
-        optimizer, lr_scheduler = configure_optimizers(model, self.init_lr, self.weight_decay,
-                                                       self.gamma, self.lr_decay_every_x_epochs)
-
-        print("==> Start training")
-        since = time.time()
-
-        loss_list = []
+        model = nn.DataParallel(model).to(device)
         
-        print('==> Creat the saving dictionary')
-        if os.path.exists(self.save_checkpoints_dir):
-            print('The directory exists, overided the files if duplicates')
-        else:
-            print('Created new dictionary for saving checkpoints')
-            os.makedirs(self.save_checkpoints_dir)
-        for epoch in range(self.epoch):
-
-            self.train_one_epoch( epoch, train_data_loader, model, optimizer, lr_scheduler)
-            _loss = self.val_one_epoch(val_data_loader, model, epoch)
-            loss_list.append(_loss.detach().cpu().numpy())
-            
-            torch.save({
-            'epoch': epoch,
-            'model_state_dict': model.state_dict(),}, self.save_checkpoints_dir+'/checkpoint_'+str(epoch)+'_iteration.ckpt')
-            if _loss.detach().cpu().numpy()<= min(loss_list):
-                torch.save({
-            'epoch': epoch,
-            'model_state_dict': model.state_dict(),}, self.save_checkpoints_dir+'/checkpoint_best.ckpt')
-            lr_scheduler.step()
-            
-
+        # Create data loaders
+        train_loader = self._create_dataloader(
+            self.train_image_files,
+            split='train',
+            img_transform=self.img_transform
+        )
+        val_loader = self._create_dataloader(
+            self.validation_image_files,
+            split='val',
+            img_transform=self.img_transform
+        )
         
-        print("==> Runtime: %.2f minutes." % ((time.time()-since)/60.0))
-        return model
+        # Configure optimizer
+        optimizer, _ = configure_optimizers(
+            model,
+            self.init_lr,
+            self.weight_decay,
+            self.gamma,
+            self.lr_decay_every_x_epochs
+        )
+        
+        # Training loop
+        epochs_per_cycle = int(self.epochs / self.cycles)
+        snapshots = []
+        
+        for cycle in range(self.cycles):
+            cycle_losses = []
+            
+            for epoch in range(epochs_per_cycle):
+                current_epoch = cycle * epochs_per_cycle + epoch
+                
+                # Update learning rate
+                lr = cosine_learning_rate(
+                    self.init_lr,
+                    epoch,
+                    epochs_per_cycle
+                )
+                optimizer.param_groups[0]['lr'] = lr
+                
+                # Train and validate
+                self.train_one_epoch(current_epoch, train_loader, model, optimizer, lr)
+                val_loss = self.validate(val_loader, model, current_epoch)
+                cycle_losses.append(val_loss)
+                
+                # Save best model in cycle
+                if val_loss <= min(cycle_losses):
+                    if self.save_checkpoints_dir:
+                        checkpoint_path = os.path.join(
+                            self.save_checkpoints_dir,
+                            f'checkpoint_se_{cycle}.ckpt'
+                        )
+                        torch.save({
+                            'model_state_dict': model.state_dict(),
+                        }, checkpoint_path)
+        
+        return "Training completed successfully"
