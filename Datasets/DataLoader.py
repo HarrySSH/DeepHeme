@@ -1,71 +1,164 @@
-import albumentations
+"""
+Dataset loader for image classification tasks.
+Handles image loading, preprocessing, and label encoding.
+"""
 
 import cv2
 import numpy as np
-
 import torch
-from torch.utils.data import DataLoader
-from torch.utils import data
+from torch.utils.data import Dataset
+from typing import Dict, List, Optional, Union
+import albumentations
+import pandas as pd
 
 
-class Img_DataLoader(data.Dataset):
-    def __init__(self, img_list='', in_dim=3, split='train', transform=False, in_size=96, df=None, encoder=None,
-                 if_external=False):
-        super(Img_DataLoader, self).__init__()
+class ImageDataset(Dataset):
+    """
+    Custom dataset class for image classification.
+    
+    Args:
+        image_paths (List[str]): List of paths to image files
+        split (str): Dataset split ('train', 'val', 'test', or 'compute')
+        transform (Optional[albumentations.Compose]): Data augmentation pipeline
+        image_size (int): Target image size
+        cell_types_df (Optional[pd.DataFrame]): DataFrame containing cell type information
+        encoder (Optional[object]): Custom encoder for image preprocessing
+        is_external (bool): Whether the dataset is from external source
+    """
+    
+    def __init__(self,
+                 image_paths: List[str],
+                 split: str = 'train',
+                 transform: Optional[albumentations.Compose] = None,
+                 image_size: int = 96,
+                 cell_types_df: Optional[pd.DataFrame] = None,
+                 encoder: Optional[object] = None,
+                 is_external: bool = False):
+        """
+        Initialize the dataset.
+        """
+        super(ImageDataset, self).__init__()
+        
         self.split = split
-        self.in_dim = in_dim
         self.transform = transform
-        self.filelist = img_list
-        self.in_size = in_size
-        self.file_paths = img_list
-        self.transform = transform
-        self.df = df
+        self.image_paths = image_paths
+        self.image_size = image_size
+        self.cell_types_df = cell_types_df
         self.encoder = encoder
-        self.if_external = if_external
+        self.is_external = is_external
 
-    def __len__(self):
-        return len(self.file_paths)
+    def __len__(self) -> int:
+        """
+        Get the total number of samples.
+        
+        Returns:
+            int: Number of samples in the dataset
+        """
+        return len(self.image_paths)
 
-    def __getitem__(self, index):
-        sample = dict()
-        img_path = self.file_paths[index]
-        # prepare image
-        orig_img = cv2.imread(img_path)
-        image = cv2.cvtColor(orig_img, cv2.COLOR_BGR2RGB)
-
-
+    def __getitem__(self, index: int) -> Dict[str, torch.Tensor]:
+        """
+        Get a single sample from the dataset.
+        
+        Args:
+            index (int): Index of the sample to retrieve
+            
+        Returns:
+            Dict[str, torch.Tensor]: Dictionary containing:
+                - image: Preprocessed image tensor
+                - label: One-hot encoded label tensor (if split != 'compute')
+                - ID: Image file path
+        """
+        # Load and preprocess image
+        image_path = self.image_paths[index]
+        image = self._load_image(image_path)
+        
+        # Apply transformations if specified
         if self.transform is not None:
             try:
-                img = self.transform(image=image)["image"]
-            except:
-                assert 1 == 2, 'something wrong'
-                
-
-        label = img_path.split('/')[-2]
-        # print(img.shape)
-        if self.if_external:
-            img = cv2.resize(img, (96, 96), interpolation=cv2.INTER_AREA)
+                image = self.transform(image=image)["image"]
+            except Exception as e:
+                raise RuntimeError(f"Error applying transformations: {str(e)}")
         
-
-        img = np.einsum('ijk->kij', img)
-
-        high_level_name = label
-        if self.split != "compute":  # Use compute if you only want the prediction results. if you do this, make sure you don't shuffle the data
-            _label = self.df[self.df['Cell_Types'] == high_level_name].iloc[:, 2:].to_numpy()
-            length = _label.shape[1]
-            sample["label"] = torch.from_numpy(_label.reshape(1, length)).float()  # one hot encoder
-
-        sample["image"] = torch.from_numpy(img).float()  # self.encoder(torch.from_numpy(img).float())
-        sample["ID"] = img_path
+        # Resize external images
+        if self.is_external:
+            image = cv2.resize(
+                image,
+                (self.image_size, self.image_size),
+                interpolation=cv2.INTER_AREA
+            )
+        
+        # Convert image to tensor format (C, H, W)
+        image = np.einsum('ijk->kij', image)
+        image_tensor = torch.from_numpy(image).float()
+        
+        # Prepare sample dictionary
+        sample = {
+            "image": image_tensor,
+            "ID": image_path
+        }
+        
+        # Add label if not in compute mode
+        if self.split != "compute":
+            label = self._get_label(image_path)
+            sample["label"] = label
+        
         return sample
+
+    def _load_image(self, image_path: str) -> np.ndarray:
+        """
+        Load and convert image to RGB format.
+        
+        Args:
+            image_path (str): Path to the image file
+            
+        Returns:
+            np.ndarray: RGB image array
+        """
+        image = cv2.imread(image_path)
+        if image is None:
+            raise ValueError(f"Failed to load image: {image_path}")
+        return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+    def _get_label(self, image_path: str) -> torch.Tensor:
+        """
+        Get one-hot encoded label for the image.
+        
+        Args:
+            image_path (str): Path to the image file
+            
+        Returns:
+            torch.Tensor: One-hot encoded label tensor
+        """
+        cell_type = image_path.split('/')[-2]
+        label_data = self.cell_types_df[
+            self.cell_types_df['Cell_Types'] == cell_type
+        ].iloc[:, 2:].to_numpy()
+        
+        return torch.from_numpy(
+            label_data.reshape(1, -1)
+        ).float()
+
+
+def convert_probabilities_to_classes(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Convert probability DataFrame to binary classification DataFrame.
     
-
-### you have a pandas dataframe, row is cell ID and colmnas is cell types, the contain is probability of each cell type
-### convert it to the predicted class, convert the dataframe to only have 1 and 0
-def convert_df_to_class(df):
-    df = df.copy()
-    df = df.drop(['Cell_Types'], axis=1)
-    df = df.apply(lambda x: x == x.max(), axis=1)
-    df = df.astype(int)
-    return df
-
+    Args:
+        df (pd.DataFrame): DataFrame with cell type probabilities
+        
+    Returns:
+        pd.DataFrame: Binary classification DataFrame
+    """
+    # Create a copy to avoid modifying the original
+    result_df = df.copy()
+    
+    # Remove the 'Cell_Types' column if it exists
+    if 'Cell_Types' in result_df.columns:
+        result_df = result_df.drop(['Cell_Types'], axis=1)
+    
+    # Convert probabilities to binary classes
+    result_df = result_df.apply(lambda x: x == x.max(), axis=1)
+    result_df = result_df.astype(int)
+    
+    return result_df

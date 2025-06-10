@@ -19,7 +19,7 @@ from sklearn.preprocessing import OneHotEncoder
 from models.CNN_models import CNNModel  # Changed from CNNModels
 from train.train_classification import trainer_classification
 from utils.utils import configure_optimizers
-from Datasets.DataLoader import Img_DataLoader
+from Datasets.DataLoader import ImageDataset
 
 ### PyTorch Imports
 import torch

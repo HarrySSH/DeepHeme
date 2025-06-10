@@ -9,7 +9,7 @@ import cv2
 import os
 sys.path.append("..")
 from torch.utils.data import DataLoader
-from Datasets.DataLoader import Img_DataLoader
+from Datasets.DataLoader import ImageDataset
 from utils.utils import configure_optimizers
 import random
 
@@ -58,7 +58,7 @@ class SnapshotEnsemble(object):
         self.cycles = cycles
 
     def _dataloader(self, datalist, split='train',img_transform = False):
-        dataset = Img_DataLoader(img_list=datalist, split=split, transform = img_transform, df = self.df)
+        dataset = ImageDataset(img_list=datalist, split=split, transform = img_transform, df = self.df)
         shuffle = True if split == 'train' else False
         dataloader = DataLoader(dataset, batch_size=self.batch_size, num_workers=2, shuffle=shuffle)
         return dataloader

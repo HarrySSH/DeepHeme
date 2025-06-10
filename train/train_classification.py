@@ -13,7 +13,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from Datasets.DataLoader import Img_DataLoader
+from Datasets.DataLoader import ImageDataset
 from utils.utils import configure_optimizers
 
 def cosine_learning_rate(initial_lr: float,
@@ -109,7 +109,7 @@ class SnapshotEnsembleTrainer:
         Returns:
             DataLoader: PyTorch DataLoader
         """
-        dataset = Img_DataLoader(
+        dataset = ImageDataset(
             img_list=data_list,
             split=split,
             transform=img_transform,
