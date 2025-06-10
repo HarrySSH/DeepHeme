@@ -1,0 +1,12 @@
+torch
+torchvision
+torchaudio
+numpy
+pandas
+scikit-learn
+albumentations
+tqdm
+pydantic
+opencv-python
+seaborn
+
